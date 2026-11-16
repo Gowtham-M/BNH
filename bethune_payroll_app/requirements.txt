@@ -1,0 +1,14 @@
+# Bethune Nursing Home — Smart Attendance & Payroll
+# Install with:  pip install -r requirements.txt
+
+pywebview>=5.0        # desktop window + JS<->Python bridge
+openpyxl>=3.1         # formatted Excel payout export
+pandas>=2.0           # tabular helpers (optional but used for robustness)
+
+# Windows-only: native eSSL .mdb reader via ODBC.
+# (On macOS/Linux development the app uses `mdbtools` instead — install with
+#  `brew install mdbtools` — so pyodbc is not required there.)
+pyodbc>=5.0 ; platform_system == "Windows"
+
+# Build toolchain for the standalone Windows executable.
+pyinstaller>=6.0 ; platform_system == "Windows"

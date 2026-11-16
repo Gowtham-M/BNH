@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bethune Nursing Home — Attendance & Payroll</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===================== HEADER ===================== -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">BNH</div>
+      <div class="brand-text">
+        <h1>Bethune Nursing Home</h1>
+        <span>Attendance &amp; Payroll</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="syncBadge" class="sync-badge sync-unknown">
+        <span class="dot"></span><span id="syncText">Checking eSSL DB…</span>
+      </div>
+      <button id="refreshBtn" class="btn btn-primary">↻ Refresh Data</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="employees">Employees &amp; Salaries</button>
+    <button class="tab" data-tab="attendance">Attendance &amp; Deductions</button>
+    <button class="tab" data-tab="policy">Policy Configuration</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- ============ TAB 1: EMPLOYEES & SALARIES ============ -->
+    <section id="tab-employees" class="tab-panel active">
+      <div class="toolbar">
+        <input id="empSearch" class="input" type="text" placeholder="Search by ID or name…" />
+        <div class="toolbar-spacer"></div>
+        <button id="esslImportBtn" class="btn btn-accent">⇩ Import from eSSL</button>
+        <input id="importFile" type="file" accept=".xlsx,.xlsm,.csv" hidden />
+        <button id="importBtn" class="btn">⬆ Import from Excel</button>
+        <button id="addEmpBtn" class="btn">＋ Add Employee</button>
+        <button id="saveEmpBtn" class="btn btn-primary" disabled>Save Changes</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Employee ID</th><th>Name</th><th class="num">Salary (₹)</th><th class="num">Actions</th></tr>
+          </thead>
+          <tbody id="empTableBody"></tbody>
+        </table>
+      </div>
+      <p id="empHint" class="muted-note"></p>
+    </section>
+
+    <!-- ============ TAB 2: ATTENDANCE & DEDUCTIONS ============ -->
+    <section id="tab-attendance" class="tab-panel">
+      <div class="toolbar">
+        <label class="field">Month <select id="monthPicker" class="input"></select></label>
+        <label class="field">Year <select id="yearPicker" class="input"></select></label>
+        <label class="field">Up to day <input id="cutoffPicker" class="input input-sm" type="number" min="1" max="31" /></label>
+        <div class="toolbar-spacer"></div>
+        <div class="filter-pills" id="statusPills">
+          <button class="pill active" data-filter="all">All Staff</button>
+          <button class="pill pill-red" data-filter="deducted">With Deductions</button>
+          <button class="pill pill-amber" data-filter="late">Late Penalty</button>
+          <button class="pill pill-green" data-filter="clean">No Deductions</button>
+        </div>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card"><span class="kpi-label">Staff</span><span id="kpiStaff" class="kpi-value">–</span></div>
+        <div class="kpi-card"><span class="kpi-label">Total Salary</span><span id="kpiSalary" class="kpi-value">–</span></div>
+        <div class="kpi-card"><span class="kpi-label">Total Deductions</span><span id="kpiDeduct" class="kpi-value">–</span></div>
+        <div class="kpi-card kpi-highlight"><span class="kpi-label">Net Payable</span><span id="kpiNet" class="kpi-value">–</span></div>
+      </div>
+
+      <div class="toolbar toolbar-sub">
+        <span id="attMeta" class="muted-note"></span>
+        <div class="toolbar-spacer"></div>
+        <button id="exportXlsxBtn" class="btn btn-accent">⬇ Download Salary Sheet (.xlsx)</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sl.No</th><th>Employee ID</th><th>Name</th><th class="num">Salary</th>
+              <th class="num">Present</th><th class="num">Leaves</th><th class="num">Late Days</th>
+              <th class="num">Leave Deduction</th><th class="num">Late Penalty</th>
+              <th class="num">Total Deduction</th><th class="num">Net Salary</th>
+            </tr>
+          </thead>
+          <tbody id="attTableBody"></tbody>
+        </table>
+      </div>
+      <p id="policyLine" class="muted-note"></p>
+    </section>
+
+    <!-- ============ TAB 3: POLICY CONFIGURATION ============ -->
+    <section id="tab-policy" class="tab-panel">
+      <div class="policy-grid">
+
+        <div class="card">
+          <h3>Shift Timings</h3>
+          <label class="form-row">Morning Shift Entry <input id="morningEntry" class="input" type="time" /></label>
+          <label class="form-row">Evening Shift Entry <input id="eveningEntry" class="input" type="time" /></label>
+          <label class="form-row">Grace Period (minutes)
+            <input id="graceMinutes" class="input" type="number" min="0" />
+          </label>
+          <p class="muted-note">A punch after the entry time + grace counts as a late day.</p>
+        </div>
+
+        <div class="card">
+          <h3>Leave Deduction</h3>
+          <div class="slab-row">Up to <input id="t1Max" class="input input-xs" type="number" min="0" /> leaves:
+            ₹<input id="t1Rate" class="input input-xs" type="number" min="0" /> per day</div>
+          <div class="slab-row">Up to <input id="t2Max" class="input input-xs" type="number" min="0" /> leaves:
+            ₹<input id="t2Rate" class="input input-xs" type="number" min="0" /> per day</div>
+          <div class="slab-row">More than that: salary ÷ <input id="t3Div" class="input input-xs" type="number" min="1" /> per day</div>
+          <label class="form-row" style="margin-top:12px">Paid weekly offs (per 7 days, not counted as leave)
+            <input id="weeklyOffs" class="input" type="number" min="0" />
+          </label>
+          <p class="muted-note">The slab is chosen by the month's total leaves and applies to every leave day.</p>
+        </div>
+
+        <div class="card">
+          <h3>Late Penalty</h3>
+          <div class="slab-row">Every <input id="lateBlock" class="input input-xs" type="number" min="1" /> late days:
+            ₹<input id="latePenalty" class="input input-xs" type="number" min="0" /></div>
+          <h3 style="margin-top:22px">eSSL Database</h3>
+          <label class="form-row">.mdb file path
+            <div class="path-row">
+              <input id="dbPath" class="input" type="text" />
+              <button id="pickMdbBtn" class="btn btn-sm">Browse…</button>
+            </div>
+          </label>
+          <label class="form-row">DB password (optional) <input id="dbPassword" class="input" type="password" /></label>
+          <button id="testConnBtn" class="btn">Test Connection</button>
+          <div id="connResult" class="conn-result"></div>
+        </div>
+      </div>
+      <div class="save-policy-row">
+        <button id="savePolicyBtn" class="btn btn-primary">Save &amp; Recalculate</button>
+        <span id="policySaved" class="muted-note"></span>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== ADD / EDIT EMPLOYEE ===================== -->
+  <div id="empModal" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h3 id="empModalTitle">Add Employee</h3>
+        <button id="empModalClose" class="btn btn-sm">✕</button>
+      </div>
+      <div class="modal-form">
+        <label class="form-row">Employee ID <span class="muted-note">(as in the eSSL Employees table)</span>
+          <input id="fId" class="input" type="text" /></label>
+        <label class="form-row">Name <input id="fName" class="input" type="text" /></label>
+        <label class="form-row">Salary (₹ per month) <input id="fSalary" class="input" type="number" min="0" step="100" /></label>
+        <div id="empFormError" class="form-error"></div>
+      </div>
+      <div class="modal-foot">
+        <div class="toolbar-spacer"></div>
+        <button id="empCancelBtn" class="btn">Cancel</button>
+        <button id="empSaveBtn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== DAILY DRAWER ===================== -->
+  <div id="drawerOverlay" class="drawer-overlay hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <div><h3 id="drawerName">Staff Member</h3><span id="drawerSub" class="muted-note"></span></div>
+      <button id="drawerClose" class="btn btn-sm">✕</button>
+    </div>
+    <div class="drawer-body">
+      <table class="data-table compact">
+        <thead><tr><th>Date</th><th>Shift</th><th>In</th><th>Out</th><th>Late (min)</th><th>Status</th><th>Waive</th></tr></thead>
+        <tbody id="drawerBody"></tbody>
+      </table>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
